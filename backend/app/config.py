@@ -7,9 +7,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def get_default_db_url() -> str:
     # If running on Vercel or AWS Lambda, the root filesystem is read-only (/var/task).
     # We must store SQLite in /tmp where write access is permitted.
-    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    is_serverless = bool(
+        os.environ.get("VERCEL")
+        or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+        or os.environ.get("LAMBDA_TASK_ROOT")
+    )
+    if is_serverless:
         return "sqlite:////tmp/bharat_ai.db"
-    return "sqlite:///./bharat_ai.db"
+    try:
+        test_file = Path("./.write_test")
+        test_file.touch()
+        test_file.unlink()
+        return "sqlite:///./bharat_ai.db"
+    except Exception:
+        return "sqlite:////tmp/bharat_ai.db"
 
 
 class Settings(BaseSettings):

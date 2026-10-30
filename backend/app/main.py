@@ -47,12 +47,26 @@ from .services.analyzer import analyze_model_file
 from .services.recommender import generate_recommendations
 from .services.pdf_generator import generate_project_pdf
 
-IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
-UPLOADS_DIR = Path("/tmp/uploads") if IS_VERCEL else Path("uploads")
-try:
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-except Exception:
-    pass
+def get_uploads_dir() -> Path:
+    is_serverless = bool(
+        os.environ.get("VERCEL")
+        or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+        or os.environ.get("LAMBDA_TASK_ROOT")
+    )
+    if is_serverless:
+        target = Path("/tmp/uploads")
+    else:
+        try:
+            target = Path("uploads")
+            target.mkdir(parents=True, exist_ok=True)
+            return target
+        except Exception:
+            target = Path("/tmp/uploads")
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    return target
 
 logger = logging.getLogger("uvicorn.error")
 settings = get_settings()
@@ -101,7 +115,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-UPLOADS_DIR = Path("uploads")
 SUPPORTED_MODEL_EXTENSIONS = {".onnx": "ONNX", ".pt": "PyTorch", ".pth": "PyTorch", ".tflite": "TFLite"}
 
 router = APIRouter()
@@ -207,7 +220,7 @@ async def upload_model(
     framework = SUPPORTED_MODEL_EXTENSIONS.get(extension)
     if not framework:
         raise HTTPException(status_code=422, detail="Upload an ONNX (.onnx), PyTorch (.pt/.pth), or TFLite (.tflite) model")
-    destination_dir = UPLOADS_DIR / f"project-{project.id}"
+    destination_dir = get_uploads_dir() / f"project-{project.id}"
     destination_dir.mkdir(parents=True, exist_ok=True)
     destination = destination_dir / f"{uuid4().hex}{extension}"
     total_size = 0
@@ -342,7 +355,7 @@ def load_sample_model(
     if not sample_file or not sample_file.exists():
         raise HTTPException(status_code=404, detail=f"Sample model '{sample_name}' not found on server")
 
-    dest_dir = UPLOADS_DIR / f"project-{project.id}"
+    dest_dir = get_uploads_dir() / f"project-{project.id}"
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = dest_dir / f"{uuid4().hex}_{sample_name}"
     shutil.copyfile(sample_file, dest_path)

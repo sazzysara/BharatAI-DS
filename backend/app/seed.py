@@ -198,6 +198,33 @@ def seed_database():
 
     db.commit()
     logger.info("Suppliers seeded.")
+
+    # 3. Seed Accounts
+    from .models import User
+    default_users = [
+        {
+            "name": "Sanjana Ramesh",
+            "email": "sanjanaramesh0808@gmail.com",
+            "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$vC3kspyRBt0q1HWuAsq4Ww$3w0UAATlBIoH52FKKQcBe8teqx9tZfeGqQSkWZQ5VGc",
+        },
+        {
+            "name": "Sanjana R",
+            "email": "sanjana.r2025aids@sece.ac.in",
+            "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$vC3kspyRBt0q1HWuAsq4Ww$3w0UAATlBIoH52FKKQcBe8teqx9tZfeGqQSkWZQ5VGc",
+        },
+        {
+            "name": "Rashika",
+            "email": "rashika.e2025aids@sece.ac.in",
+            "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$hX/o7u5FtDzd75H39M2Yyg$ImMwWoB9SsZ6+6FCm9w8Po4YnG/9OL48Ff/K9i/seQw",
+        },
+    ]
+    for u in default_users:
+        existing_u = db.scalar(select(User).where(User.email == u["email"].lower()))
+        if not existing_u:
+            db.add(User(name=u["name"], email=u["email"].lower(), password_hash=u["password_hash"]))
+
+    db.commit()
+    logger.info("Users seeded.")
     db.close()
 
 
