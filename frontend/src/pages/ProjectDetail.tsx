@@ -476,37 +476,129 @@ export const ProjectDetail: React.FC = () => {
                   )}
 
                   <div className="mt-6 border-t border-[#f0ecf4] pt-4">
-                    <span className="text-xs font-semibold text-[#1c0b26]">
-                      Need a sample project document to test?
-                    </span>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sampleContent =
-                            'Project: Indic Multi-Lingual Assistant\nArchitecture: Large Language Model (Llama-3 8B)\nPrecision: INT4\nTarget Output Time: < 40ms per token\nTarget Budget: Under ₹2,50,000 INR\nTarget Power: < 450W\nContext Length: 8192 tokens\nEnvironment: Local AI Workstation\nPriority: Cost-Efficient with Indian Silicon options.';
-                          const blob = new Blob([sampleContent], { type: 'text/plain' });
-                          const file = new File([blob], 'Llama3_Project_Specification.txt', { type: 'text/plain' });
-                          handleDocumentUpload(file);
-                        }}
-                        className="rounded-lg border border-[#e4d4ec] bg-[#faf8fc] px-3 py-1.5 font-medium text-[#3e1b53] hover:border-[#f59e0b] hover:bg-white"
-                      >
-                        📄 Test with Sample PRD: Llama-3 8B Enterprise Assistant
-                      </button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#1c0b26]">
+                        Download or Test with Sample Project Specification PDFs:
+                      </span>
+                      <span className="text-[11px] text-[#d97706] font-semibold">
+                        Real PDF documents with complete model specifications
+                      </span>
+                    </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sampleContent =
-                            'Project: Smart Highway Camera Detection\nModel: YOLOv8 Edge Vision\nParameters: 25 million parameters\nTarget Latency: < 20ms real-time video processing\nBudget: ₹15,000 INR\nPower: < 15W battery/drone\nEnvironment: Edge Appliance\nPriority: Make in India sovereign silicon preferred.';
-                          const blob = new Blob([sampleContent], { type: 'text/plain' });
-                          const file = new File([blob], 'Smart_Highway_Vision_Spec.txt', { type: 'text/plain' });
-                          handleDocumentUpload(file);
-                        }}
-                        className="rounded-lg border border-[#e4d4ec] bg-[#faf8fc] px-3 py-1.5 font-medium text-[#3e1b53] hover:border-[#f59e0b] hover:bg-white"
-                      >
-                        📄 Test with Sample PRD: Highway Edge Vision (&lt; 20ms, ₹15k)
-                      </button>
+                    <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3 text-xs">
+                      {/* Sample 1: Drone Vision PDF */}
+                      <div className="flex flex-col justify-between rounded-xl border border-[#e4d4ec] bg-[#faf8fc] p-3 transition-all hover:border-[#f59e0b]">
+                        <div>
+                          <b className="text-[#1c0b26] text-xs">1. Drone Edge Vision PRD</b>
+                          <p className="mt-1 text-[11px] text-[#645c70]">
+                            YOLOv8 Nano (25M params), 18ms latency, 45 FPS, &lt; 15W TDP, ₹25,000 budget.
+                          </p>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <a
+                            href="/samples/Edge_Drone_Vision_Surveillance_PRD.pdf"
+                            download="Edge_Drone_Vision_Surveillance_PRD.pdf"
+                            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#1c0b26] hover:bg-stone-50"
+                          >
+                            ⬇ Download PDF
+                          </a>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                setIsAnalyzingDoc(true);
+                                const res = await fetch('/samples/Edge_Drone_Vision_Surveillance_PRD.pdf');
+                                const blob = await res.blob();
+                                const file = new File([blob], 'Edge_Drone_Vision_Surveillance_PRD.pdf', { type: 'application/pdf' });
+                                await handleDocumentUpload(file);
+                              } catch (e: any) {
+                                toast(e?.message || 'Failed to analyze sample PDF', 'error');
+                              } finally {
+                                setIsAnalyzingDoc(false);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg bg-[#1c0b26] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#3e1b53]"
+                          >
+                            ⚡ Analyze PDF
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Sample 2: Enterprise LLM PDF */}
+                      <div className="flex flex-col justify-between rounded-xl border border-[#e4d4ec] bg-[#faf8fc] p-3 transition-all hover:border-[#f59e0b]">
+                        <div>
+                          <b className="text-[#1c0b26] text-xs">2. Enterprise 7B LLM PRD</b>
+                          <p className="mt-1 text-[11px] text-[#645c70]">
+                            Indic-Mistral-7B, FP16, 4096 ctx, 60 tok/s, 450W TDP, ₹2,50,000 budget.
+                          </p>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <a
+                            href="/samples/Enterprise_Sovereign_LLM_Server_PRD.pdf"
+                            download="Enterprise_Sovereign_LLM_Server_PRD.pdf"
+                            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#1c0b26] hover:bg-stone-50"
+                          >
+                            ⬇ Download PDF
+                          </a>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                setIsAnalyzingDoc(true);
+                                const res = await fetch('/samples/Enterprise_Sovereign_LLM_Server_PRD.pdf');
+                                const blob = await res.blob();
+                                const file = new File([blob], 'Enterprise_Sovereign_LLM_Server_PRD.pdf', { type: 'application/pdf' });
+                                await handleDocumentUpload(file);
+                              } catch (e: any) {
+                                toast(e?.message || 'Failed to analyze sample PDF', 'error');
+                              } finally {
+                                setIsAnalyzingDoc(false);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg bg-[#1c0b26] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#3e1b53]"
+                          >
+                            ⚡ Analyze PDF
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Sample 3: Industrial Defect Inspection PDF */}
+                      <div className="flex flex-col justify-between rounded-xl border border-[#e4d4ec] bg-[#faf8fc] p-3 transition-all hover:border-[#f59e0b]">
+                        <div>
+                          <b className="text-[#1c0b26] text-xs">3. Industrial Defect PRD</b>
+                          <p className="mt-1 text-[11px] text-[#645c70]">
+                            ResNet-50 (25.5M params), 25ms latency, 60 FPS, 75W TDP, ₹75,000 budget.
+                          </p>
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <a
+                            href="/samples/Industrial_Defect_Inspection_System_PRD.pdf"
+                            download="Industrial_Defect_Inspection_System_PRD.pdf"
+                            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#1c0b26] hover:bg-stone-50"
+                          >
+                            ⬇ Download PDF
+                          </a>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                setIsAnalyzingDoc(true);
+                                const res = await fetch('/samples/Industrial_Defect_Inspection_System_PRD.pdf');
+                                const blob = await res.blob();
+                                const file = new File([blob], 'Industrial_Defect_Inspection_System_PRD.pdf', { type: 'application/pdf' });
+                                await handleDocumentUpload(file);
+                              } catch (e: any) {
+                                toast(e?.message || 'Failed to analyze sample PDF', 'error');
+                              } finally {
+                                setIsAnalyzingDoc(false);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg bg-[#1c0b26] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#3e1b53]"
+                          >
+                            ⚡ Analyze PDF
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

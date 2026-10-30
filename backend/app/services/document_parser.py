@@ -198,7 +198,7 @@ def parse_text_to_spec(text: str, source_name: str = "Project Document") -> Dict
 
     # 7. Budget (INR)
     max_budget_inr = None
-    b_curr_match = re.search(r"(?:₹|rs\.?|inr)\s*(\d[\d,]*)(?:\s*(?:k|thousand|lakh|lakhs|cr|crore))?", text_lower)
+    b_curr_match = re.search(r"(?:₹|rs\.?|inr)[^0-9\n]{0,10}(\d[\d,]*)(?:\s*(?:k|thousand|lakh|lakhs|cr|crore))?", text_lower)
     if b_curr_match:
         val_str = b_curr_match.group(1).replace(",", "")
         try:
@@ -208,15 +208,16 @@ def parse_text_to_spec(text: str, source_name: str = "Project Document") -> Dict
                 val *= 100000.0
             elif "k" in context_window and val < 1000:
                 val *= 1000.0
-            max_budget_inr = val
+            if val >= 500:
+                max_budget_inr = val
         except Exception:
             pass
     if max_budget_inr is None:
-        b_word_match = re.search(r"(?:budget|max cost)[^0-9\n]{0,25}(\d[\d,]+)", text_lower)
+        b_word_match = re.search(r"(?:budget|target budget|max cost)[^0-9\n]{0,25}(\d[\d,]+)", text_lower)
         if b_word_match:
             try:
                 val = float(b_word_match.group(1).replace(",", ""))
-                if val >= 100:
+                if val >= 500:
                     max_budget_inr = val
             except Exception:
                 pass
@@ -224,6 +225,8 @@ def parse_text_to_spec(text: str, source_name: str = "Project Document") -> Dict
     # 8. Power budget (Watts)
     max_power_w = None
     pow_match = re.search(r"(?:power|tdp|wattage)[^0-9\n]{0,35}(\d+(?:\.\d+)?)\s*(?:w|watts)", text_lower)
+    if not pow_match:
+        pow_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:w|watts)\s*(?:tdp)?", text_lower)
     if pow_match:
         try:
             max_power_w = float(pow_match.group(1))
