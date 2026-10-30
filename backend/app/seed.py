@@ -22,9 +22,15 @@ def seed_database():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
-    root_dir = Path(__file__).resolve().parent.parent.parent
-    hw_csv = root_dir / "data" / "hardware_devices.csv"
-    bench_csv = root_dir / "data" / "benchmarks.csv"
+    data_candidates = [
+        Path(__file__).resolve().parent.parent.parent / "data",
+        Path(__file__).resolve().parent.parent / "data",
+        Path("data").resolve(),
+        Path("/var/task/data"),
+    ]
+    data_dir = next((p for p in data_candidates if p.exists()), data_candidates[0])
+    hw_csv = data_dir / "hardware_devices.csv"
+    bench_csv = data_dir / "benchmarks.csv"
 
     # 1. Seed Hardware Devices
     if hw_csv.exists():

@@ -8,4 +8,6 @@ PyJWT>=2.10.0
 pwdlib[argon2]>=0.2.0
 python-multipart>=0.0.20
 alembic>=1.13.0
-
+onnx>=1.16.0
+numpy>=1.26.0
+reportlab>=4.2.0

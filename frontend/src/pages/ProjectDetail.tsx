@@ -18,7 +18,7 @@ import { useToast } from '../context/ToastContext';
 import { api } from '../api/client';
 import { Project, Model } from '../api/types';
 
-const tabs = ['Model', 'Requirements', 'Compatibility', 'Optimization', 'Recommendation', 'Report'] as const;
+const tabs = ['Model', 'Analysis', 'Recommendations', 'Suppliers', 'Report'] as const;
 type Tab = (typeof tabs)[number];
 
 export const ProjectDetail: React.FC = () => {
@@ -148,7 +148,20 @@ export const ProjectDetail: React.FC = () => {
             <button
               key={t}
               className={activeTab === t ? 'active' : ''}
-              onClick={() => setActiveTab(t)}
+              onClick={() => {
+                if (t === 'Analysis') {
+                  const mId = models[0]?.id;
+                  navigate(`/projects/${projectId}/analysis${mId ? `?modelId=${mId}` : ''}`);
+                } else if (t === 'Recommendations') {
+                  navigate(`/projects/${projectId}/recommendations`);
+                } else if (t === 'Suppliers') {
+                  navigate(`/projects/${projectId}/suppliers`);
+                } else if (t === 'Report') {
+                  navigate(`/projects/${projectId}/report`);
+                } else {
+                  setActiveTab(t);
+                }
+              }}
             >
               {t}
             </button>
@@ -336,40 +349,7 @@ export const ProjectDetail: React.FC = () => {
               </div>
             )}
           </div>
-        ) : (
-          <div className="rounded-2xl border border-[#d8deeb] bg-[#ffffff] p-12 text-center shadow-sm">
-            <BrainCircuit size={40} className="mx-auto mb-3 text-[#f59e0b]" />
-            <h2 className="font-['Fraunces'] text-2xl font-bold text-[#1c0b26]">{activeTab}</h2>
-            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[#645c70]">
-              {activeTab === 'Requirements' &&
-                'Define latency constraints, thermal thresholds (TDP), and target batch sizes.'}
-              {activeTab === 'Compatibility' &&
-                'Filter 40+ hardware accelerators based on memory fit and compute capability.'}
-              {activeTab === 'Optimization' &&
-                'Simulate INT8 quantization, FP16 pruning, and roofline model projections.'}
-              {activeTab === 'Recommendation' &&
-                'Execute TOPSIS multi-criteria decision analysis across latency, power, price, and Indian sourcing.'}
-              {activeTab === 'Report' &&
-                'Generate a downloadable executive assessment report for leadership & procurement.'}
-            </p>
-            {activeTab === 'Recommendation' && (
-              <button
-                className="button marigold-btn mt-5"
-                onClick={() => navigate(`/projects/${projectId}/recommendations`)}
-              >
-                Open Recommendations <ArrowRight size={14} />
-              </button>
-            )}
-            {activeTab === 'Report' && (
-              <button
-                className="button marigold-btn mt-5"
-                onClick={() => navigate(`/projects/${projectId}/report`)}
-              >
-                Open Report <ArrowRight size={14} />
-              </button>
-            )}
-          </div>
-        )}
+        ) : null}
       </section>
 
       {editModal && (

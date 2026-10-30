@@ -79,6 +79,9 @@ class ApiClient {
     }
 
     if (!res.ok) {
+      if (res.status === 401) {
+        this.setToken(null);
+      }
       let message =
         data?.detail ||
         data?.error ||

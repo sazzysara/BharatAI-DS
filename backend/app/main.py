@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import logging
+import os
 from pathlib import Path
 from typing import Any, AsyncGenerator
 from uuid import uuid4
@@ -45,6 +46,13 @@ from .security import create_access_token, get_current_user, password_hash
 from .services.analyzer import analyze_model_file
 from .services.recommender import generate_recommendations
 
+IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+UPLOADS_DIR = Path("/tmp/uploads") if IS_VERCEL else Path("uploads")
+try:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
+
 logger = logging.getLogger("uvicorn.error")
 settings = get_settings()
 
@@ -52,8 +60,16 @@ settings = get_settings()
 def ensure_tables() -> None:
     try:
         Base.metadata.create_all(bind=engine)
+        from .models import HardwareDevice
+        from .seed import seed_database
+        from .database import SessionLocal
+        with SessionLocal() as db:
+            count = db.query(HardwareDevice).count()
+            if count == 0:
+                logger.info("Empty database detected; running automatic hardware & supplier seeding...")
+                seed_database()
     except Exception as e:
-        logger.warning(f"Error ensuring database tables: {e}")
+        logger.warning(f"Error ensuring database tables or seeding: {e}")
 
 
 @asynccontextmanager
@@ -308,10 +324,22 @@ def load_sample_model(
 ) -> Model:
     import shutil
     project = get_project(project_id, user, db)
-    samples_dir = Path("samples")
-    sample_file = samples_dir / sample_name
-    if not sample_file.exists():
-        raise HTTPException(status_code=404, detail=f"Sample model '{sample_name}' not found")
+    
+    # Locate samples directory robustly across local and serverless environments
+    candidates = [
+        Path(__file__).resolve().parent.parent.parent / "samples",
+        Path(__file__).resolve().parent.parent / "samples",
+        Path("samples").resolve(),
+        Path("/var/task/samples"),
+    ]
+    sample_file = None
+    for cand in candidates:
+        if (cand / sample_name).exists():
+            sample_file = cand / sample_name
+            break
+
+    if not sample_file or not sample_file.exists():
+        raise HTTPException(status_code=404, detail=f"Sample model '{sample_name}' not found on server")
 
     dest_dir = UPLOADS_DIR / f"project-{project.id}"
     dest_dir.mkdir(parents=True, exist_ok=True)
