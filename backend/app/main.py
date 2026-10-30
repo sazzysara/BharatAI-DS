@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import logging
 from pathlib import Path
 from typing import Any, AsyncGenerator
 from uuid import uuid4
-from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from .config import get_settings
@@ -41,24 +43,44 @@ from .schemas import (
 )
 from .security import create_access_token, get_current_user, password_hash
 
+logger = logging.getLogger("uvicorn.error")
 settings = get_settings()
+
+
+def ensure_tables() -> None:
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning(f"Error ensuring database tables: {e}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    Base.metadata.create_all(bind=engine)
+    ensure_tables()
     yield
 
 
 app = FastAPI(title="Bharat AI Hardware Intelligence API", version="0.1.0", lifespan=lifespan)
 
+# Allow all origins for Vercel preview URLs, custom domains, and localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.cors_origins == "*" else [x.strip() for x in settings.cors_origins.split(",")],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Server error: {str(exc)}"},
+    )
+
 
 UPLOADS_DIR = Path("uploads")
 SUPPORTED_MODEL_EXTENSIONS = {".onnx": "ONNX", ".pt": "PyTorch", ".pth": "PyTorch", ".tflite": "TFLite"}
@@ -74,9 +96,15 @@ def health() -> dict[str, str]:
 # ---------------- Auth Endpoints ----------------
 @router.post("/auth/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def signup(payload: SignupRequest, db: Session = Depends(get_db)) -> AuthResponse:
-    if db.scalar(select(User).where(User.email == payload.email.lower())):
+    ensure_tables()
+    existing = db.scalar(select(User).where(User.email == payload.email.lower()))
+    if existing:
         raise HTTPException(status_code=409, detail="An account already exists for this email")
-    user = User(name=payload.name.strip(), email=payload.email.lower(), password_hash=password_hash.hash(payload.password))
+    user = User(
+        name=payload.name.strip(),
+        email=payload.email.lower(),
+        password_hash=password_hash.hash(payload.password),
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -85,6 +113,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)) -> AuthRespons
 
 @router.post("/auth/login", response_model=AuthResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
+    ensure_tables()
     user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if not user or not password_hash.verify(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
@@ -202,6 +231,7 @@ def list_hardware(
     is_indian: bool | None = None,
     db: Session = Depends(get_db),
 ) -> list[HardwareDevice]:
+    ensure_tables()
     stmt = select(HardwareDevice)
     if category:
         stmt = stmt.where(HardwareDevice.category == category)
@@ -212,6 +242,7 @@ def list_hardware(
 
 @router.get("/hardware/{device_id}", response_model=HardwareDeviceOut)
 def get_hardware(device_id: int, db: Session = Depends(get_db)) -> HardwareDevice:
+    ensure_tables()
     device = db.get(HardwareDevice, device_id)
     if not device:
         raise HTTPException(status_code=404, detail="Hardware device not found")
@@ -225,6 +256,7 @@ def list_benchmarks(
     model_name: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[Benchmark]:
+    ensure_tables()
     stmt = select(Benchmark)
     if device_id is not None:
         stmt = stmt.where(Benchmark.device_id == device_id)
@@ -262,6 +294,7 @@ def list_suppliers(
     brand: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[Supplier]:
+    ensure_tables()
     stmt = select(Supplier)
     if city:
         stmt = stmt.where(Supplier.city.ilike(f"%{city}%"))
@@ -276,6 +309,7 @@ def create_supplier_request(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SupplierRequest:
+    ensure_tables()
     supplier = db.get(Supplier, payload.supplier_id)
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
@@ -314,6 +348,6 @@ def list_reports(project_id: int, user: User = Depends(get_current_user), db: Se
     return list(db.scalars(select(Report).where(Report.project_id == project.id).order_by(Report.created_at.desc())))
 
 
-# Mount router to handle both root routes (e.g. /projects) and prefixed routes (e.g. /api/projects)
+# Mount router for both root and /api prefixes
 app.include_router(router)
 app.include_router(router, prefix="/api")
