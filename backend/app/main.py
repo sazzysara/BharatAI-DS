@@ -84,7 +84,7 @@ app = FastAPI(title="Bharat AI Hardware Intelligence API", version="0.1.0", life
 # Allow all origins for Vercel preview URLs, custom domains, and localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

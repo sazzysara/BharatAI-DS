@@ -33,7 +33,18 @@ export const Auth: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
       }
       navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err?.message || 'Authentication failed. Please check your credentials.');
+      const msg = String(err?.message || '');
+      if (
+        msg.includes('Failed to fetch') ||
+        msg.includes('NetworkError') ||
+        msg.includes('Load failed')
+      ) {
+        setError(
+          'Unable to reach Bharat AI server. If running locally, please start the backend on port 8000. On Vercel, please check your network connection.'
+        );
+      } else {
+        setError(msg || 'Authentication failed. Please check your credentials.');
+      }
     } finally {
       setBusy(false);
     }

@@ -13,16 +13,10 @@ import {
 } from './types';
 
 const RAW_BASE_URL = import.meta.env.VITE_API_URL;
-// If VITE_API_URL is configured (e.g. in Vercel env), use it.
-// When running locally on localhost, default to http://localhost:8000.
-// On production deployments without VITE_API_URL, default to relative '' so /api routes hit Vercel Serverless.
-const API_BASE_URL =
-  RAW_BASE_URL !== undefined
-    ? RAW_BASE_URL
-    : typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:8000'
-    : '';
+// If VITE_API_URL is explicitly configured, use it.
+// Otherwise default to relative '' so all requests use same-origin /api routes
+// (proxied by Vite dev server locally to port 8000, and handled by Vercel serverless in production)
+const API_BASE_URL = RAW_BASE_URL || '';
 
 class ApiClient {
   private get token(): string | null {
@@ -43,10 +37,8 @@ class ApiClient {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    // If relative path on production, ensure /api prefix is present so Vercel serverless receives it
-    const normalizedPath =
-      API_BASE_URL === '' && !path.startsWith('/api') ? `/api${path}` : path;
-    const url = `${API_BASE_URL}${normalizedPath}`;
+    const apiPath = path.startsWith('/api') ? path : `/api${path}`;
+    const url = `${API_BASE_URL}${apiPath}`;
 
     const headers: Record<string, string> = {
       ...(options.headers as Record<string, string>),
@@ -93,7 +85,7 @@ class ApiClient {
         } else if (res.status === 500) {
           message = 'Server error (500). Please check backend connection and database status.';
         } else if (res.status === 404) {
-          message = `Resource not found (404) at ${normalizedPath}`;
+          message = `Resource not found (404) at ${apiPath}`;
         } else {
           message = `API error ${res.status}${res.statusText ? `: ${res.statusText}` : ''}`;
         }
