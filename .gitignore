@@ -1,0 +1,38 @@
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node & Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+.npm/
+
+# Uploads & Media
+uploads/
+project-*/
+
+# Environment variables & secrets
+.env
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+

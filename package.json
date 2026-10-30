@@ -1,0 +1,12 @@
+{
+  "name": "bharat-ai-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bharat AI Hardware Intelligence Platform - Sovereign AI silicon evaluation & supplier network",
+  "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
+    "test:backend": "python -m pytest"
+  }
+}
+
