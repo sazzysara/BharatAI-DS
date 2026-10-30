@@ -69,15 +69,33 @@ class ApiClient {
       return {} as T;
     }
 
-    let data;
+    let data: any = null;
+    let rawText = '';
     try {
-      data = await res.json();
+      rawText = await res.text();
+      data = rawText ? JSON.parse(rawText) : null;
     } catch {
       data = null;
     }
 
     if (!res.ok) {
-      const message = data?.detail || `API error: ${res.status} ${res.statusText}`;
+      let message =
+        data?.detail ||
+        data?.error ||
+        data?.message;
+
+      if (!message) {
+        if (rawText && rawText.length < 200 && !rawText.includes('<html')) {
+          message = rawText.trim();
+        } else if (res.status === 500) {
+          message = 'Server error (500). Please check backend connection and database status.';
+        } else if (res.status === 404) {
+          message = `Resource not found (404) at ${normalizedPath}`;
+        } else {
+          message = `API error ${res.status}${res.statusText ? `: ${res.statusText}` : ''}`;
+        }
+      }
+
       throw new Error(message);
     }
 
