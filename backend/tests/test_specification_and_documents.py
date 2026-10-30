@@ -77,3 +77,4 @@ def test_endpoints_specification(client, auth_headers):
     assert "Recommended Configuration" in categories
     assert "Optimal Configuration" in categories
     assert "Minimum Configuration" in categories
+
