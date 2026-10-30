@@ -45,6 +45,7 @@ from .schemas import (
 from .security import create_access_token, get_current_user, password_hash
 from .services.analyzer import analyze_model_file
 from .services.recommender import generate_recommendations
+from .services.pdf_generator import generate_project_pdf
 
 IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 UPLOADS_DIR = Path("/tmp/uploads") if IS_VERCEL else Path("uploads")
@@ -513,6 +514,32 @@ def list_user_supplier_requests(user: User = Depends(get_current_user), db: Sess
 def list_reports(project_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Report]:
     project = get_project(project_id, user, db)
     return list(db.scalars(select(Report).where(Report.project_id == project.id).order_by(Report.created_at.desc())))
+
+
+@router.get("/projects/{project_id}/report/pdf")
+def download_project_report_pdf(
+    project_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from fastapi.responses import Response
+    project = get_project(project_id, user, db)
+    model = db.scalar(select(Model).where(Model.project_id == project.id).order_by(Model.created_at.desc()))
+    analysis = db.scalar(select(Analysis).where(Analysis.model_id == model.id).order_by(Analysis.created_at.desc())) if model else None
+    recommendations = list(db.scalars(select(Recommendation).where(Recommendation.project_id == project.id).order_by(Recommendation.score.desc())))
+    suppliers = list(db.scalars(select(Supplier).order_by(Supplier.name)))
+
+    pdf_bytes = generate_project_pdf(project, model, analysis, recommendations, suppliers)
+    safe_title = "".join(c for c in project.name if c.isalnum() or c in ("-", "_")).strip() or "Deployment"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="BharatAI_Dossier_{safe_title}.pdf"',
+            "Content-Type": "application/pdf",
+        },
+    )
 
 
 # Mount router for both root and /api prefixes

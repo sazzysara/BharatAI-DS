@@ -37,15 +37,27 @@ export const Report: React.FC = () => {
     fetchData();
   }, [projectId]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     setDownloading(true);
-    setTimeout(() => {
+    try {
+      const blob = await api.downloadReportPdf(projectId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = (project?.name || 'Project').replace(/[^a-zA-Z0-9_-]/g, '_');
+      a.download = `BharatAI_Report_${safeName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast(`Deployment dossier for "${project?.name || 'Project'}" downloaded!`, 'success');
+    } catch (err: any) {
+      console.warn('Backend PDF download error, triggering browser print-to-PDF:', err);
+      window.print();
+      toast('Print/Save as PDF triggered.', 'info');
+    } finally {
       setDownloading(false);
-      toast(
-        `Deployment assessment generated for ${project?.name || 'Project'}! Report download initialized.`,
-        'success'
-      );
-    }, 600);
+    }
   };
 
   if (loading) {

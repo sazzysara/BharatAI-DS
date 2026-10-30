@@ -255,6 +255,24 @@ class ApiClient {
   async getProjectReports(projectId: number): Promise<Report[]> {
     return this.request<Report[]>(`/projects/${projectId}/reports`);
   }
+
+  async downloadReportPdf(projectId: number): Promise<Blob> {
+    const path = `/projects/${projectId}/report/pdf`;
+    const normalizedPath =
+      API_BASE_URL === '' && !path.startsWith('/api') ? `/api${path}` : path;
+    const url = `${API_BASE_URL}${normalizedPath}`;
+
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      throw new Error(`Failed to generate PDF: ${res.statusText || res.status}`);
+    }
+    return res.blob();
+  }
 }
 
 export const api = new ApiClient();
