@@ -204,6 +204,83 @@ export const ProjectDetail: React.FC = () => {
                   <span>Transferring model & initializing graph inspection…</span>
                 </div>
               )}
+
+              <div className="mt-6 border-t border-[#f0ecf4] pt-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-[#f59e0b]" />
+                    <span className="font-['Fraunces'] text-sm font-bold text-[#1c0b26]">
+                      Instant Test: Load Competition Benchmark Samples
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-medium text-stone-500">Click to run real TOPSIS evaluation</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <button
+                    disabled={isUploading}
+                    onClick={async () => {
+                      setIsUploading(true);
+                      try {
+                        const m = await api.loadSampleModel(projectId, 'mobilenetv2_helmet_detection.onnx');
+                        toast('Loaded MobileNetV2 edge model with full profile & ranking!', 'success');
+                        navigate(`/projects/${projectId}/analysis?modelId=${m.id}`);
+                      } catch (e: any) {
+                        toast(e?.message || 'Failed to load sample', 'error');
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }}
+                    className="flex flex-col items-start rounded-xl border border-[#e5dceb] bg-[#faf8fc] p-3 text-left transition-all hover:border-[#f59e0b] hover:bg-white"
+                  >
+                    <span className="text-xs font-bold text-[#1c0b26]">1. MobileNetV2 Helmet</span>
+                    <span className="mt-1 text-[11px] text-[#645c70]">Lightweight Edge CNN · 167K params · 2.1 GFLOPs</span>
+                    <span className="mt-2 text-[10px] font-bold text-[#d97706]">Ranks: Raspberry Pi 5 / Jetson Nano →</span>
+                  </button>
+
+                  <button
+                    disabled={isUploading}
+                    onClick={async () => {
+                      setIsUploading(true);
+                      try {
+                        const m = await api.loadSampleModel(projectId, 'resnet50_industrial_defect.onnx');
+                        toast('Loaded ResNet-50 industrial model with full profile & ranking!', 'success');
+                        navigate(`/projects/${projectId}/analysis?modelId=${m.id}`);
+                      } catch (e: any) {
+                        toast(e?.message || 'Failed to load sample', 'error');
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }}
+                    className="flex flex-col items-start rounded-xl border border-[#e5dceb] bg-[#faf8fc] p-3 text-left transition-all hover:border-[#f59e0b] hover:bg-white"
+                  >
+                    <span className="text-xs font-bold text-[#1c0b26]">2. ResNet-50 Defect</span>
+                    <span className="mt-1 text-[11px] text-[#645c70]">Medium Residual CNN · 24.9M params · 6.7 GFLOPs</span>
+                    <span className="mt-2 text-[10px] font-bold text-[#d97706]">Ranks: Orin NX / RTX 4060 →</span>
+                  </button>
+
+                  <button
+                    disabled={isUploading}
+                    onClick={async () => {
+                      setIsUploading(true);
+                      try {
+                        const m = await api.loadSampleModel(projectId, 'indic_bert_transformer.onnx');
+                        toast('Loaded IndicBERT transformer with full profile & ranking!', 'success');
+                        navigate(`/projects/${projectId}/analysis?modelId=${m.id}`);
+                      } catch (e: any) {
+                        toast(e?.message || 'Failed to load sample', 'error');
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }}
+                    className="flex flex-col items-start rounded-xl border border-[#e5dceb] bg-[#faf8fc] p-3 text-left transition-all hover:border-[#f59e0b] hover:bg-white"
+                  >
+                    <span className="text-xs font-bold text-[#1c0b26]">3. IndicBERT NLP</span>
+                    <span className="mt-1 text-[11px] text-[#645c70]">Transformer · 1.04M params · Attention & LayerNorm</span>
+                    <span className="mt-2 text-[10px] font-bold text-[#d97706]">Ranks: High-VRAM GPU / Sovereign →</span>
+                  </button>
+                </div>
+              </div>
             </article>
 
             {models.length > 0 && (

@@ -178,6 +178,12 @@ class ApiClient {
     return this.request<Model[]>(`/projects/${projectId}/models`);
   }
 
+  async loadSampleModel(projectId: number, sampleName: string): Promise<Model> {
+    return this.request<Model>(`/projects/${projectId}/load-sample?sample_name=${encodeURIComponent(sampleName)}`, {
+      method: 'POST',
+    });
+  }
+
   // Hardware
   async getHardware(category?: string, isIndian?: boolean): Promise<HardwareDevice[]> {
     const params = new URLSearchParams();

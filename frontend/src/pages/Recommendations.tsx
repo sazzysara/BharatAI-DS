@@ -91,13 +91,49 @@ export const Recommendations: React.FC = () => {
         </div>
         {recommendations.length > 0
           ? recommendations.map((r) => (
-              <div className="table-row" key={r.id}>
-                <span>{r.category}</span>
+              <div className="table-row !items-start" key={r.id}>
                 <div>
-                  <b>{r.device?.name || `Device #${r.device_id}`}</b>
-                  <div className="mt-1 text-xs text-stone-500">
-                    Est. Latency: {r.predicted_latency_ms.toFixed(1)} ms · Est. Power: {r.predicted_power_w.toFixed(1)} W
+                  <span className="inline-block rounded-lg bg-[#f5eff8] px-2.5 py-1 text-xs font-bold text-[#3e1b53]">
+                    {r.category}
+                  </span>
+                  <div className="mt-1 text-[11px] font-mono text-[#d97706]">
+                    TOPSIS Index: {r.score.toFixed(3)}
                   </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <b className="text-base text-[#1c0b26]">{r.device?.name || `Device #${r.device_id}`}</b>
+                    {r.device && (
+                      <span className="font-mono text-xs font-bold text-[#1c0b26]">
+                        ₹{r.device.price_inr.toLocaleString('en-IN')}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-600">
+                    <span>
+                      <b>Latency:</b> {r.predicted_latency_ms.toFixed(1)} ms{' '}
+                      <small className="text-stone-400">({r.confidence_interval_latency || '±8%'})</small>
+                    </span>
+                    <span>
+                      <b>Power:</b> {r.predicted_power_w.toFixed(1)} W{' '}
+                      <small className="text-stone-400">({r.confidence_interval_power || '±6%'})</small>
+                    </span>
+                    {r.device?.is_indian && (
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-900">
+                        <ShieldCheck size={12} /> Indian Sovereign Hardware
+                      </span>
+                    )}
+                    {r.device?.availability_in_india && (
+                      <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-800">
+                        {r.device.availability_in_india}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-2 text-xs leading-relaxed text-[#4a4253]">
+                    {r.rationale}
+                  </p>
                 </div>
               </div>
             ))

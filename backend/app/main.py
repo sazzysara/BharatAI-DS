@@ -42,6 +42,8 @@ from .schemas import (
     UserOut,
 )
 from .security import create_access_token, get_current_user, password_hash
+from .services.analyzer import analyze_model_file
+from .services.recommender import generate_recommendations
 
 logger = logging.getLogger("uvicorn.error")
 settings = get_settings()
@@ -207,7 +209,80 @@ async def upload_model(
     db.add(model)
     db.commit()
     db.refresh(model)
+
+    # Automatically run initial computational profiling and multi-criteria recommendation
+    try:
+        profile = analyze_model_file(str(destination), filename)
+        model.parameters = profile["parameters_count"]
+        model.flops = profile["flops"]
+        model.memory = profile["total_memory_mb"]
+        model.precision = profile["precision"]
+        model.input_resolution = profile["input_shape"]
+
+        analysis = Analysis(
+            model_id=model.id,
+            model_family=profile["model_family"],
+            parameters_count=profile["parameters_count"],
+            flops=profile["flops"],
+            macs=profile.get("macs"),
+            activation_memory_mb=profile.get("activation_memory_mb"),
+            weight_memory_mb=profile.get("weight_memory_mb"),
+            total_memory_mb=profile["total_memory_mb"],
+            input_shape=profile["input_shape"],
+            precision=profile["precision"],
+            op_histogram=profile.get("op_histogram"),
+            analysis_summary=profile.get("analysis_summary"),
+        )
+        db.add(analysis)
+        db.commit()
+        db.refresh(analysis)
+
+        # Generate hardware recommendations using TOPSIS
+        generate_recommendations(analysis, db)
+        db.refresh(model)
+    except Exception as e:
+        logger.warning(f"Error during automatic model profiling: {e}")
+
     return model
+
+
+@router.post("/models/{model_id}/analyze", response_model=AnalysisOut)
+def analyze_model_endpoint(
+    model_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Analysis:
+    model = get_model(model_id, user, db)
+    if not Path(model.storage_path).exists():
+        raise HTTPException(status_code=404, detail="Model file not found on server disk")
+
+    profile = analyze_model_file(model.storage_path, model.filename)
+    model.parameters = profile["parameters_count"]
+    model.flops = profile["flops"]
+    model.memory = profile["total_memory_mb"]
+    model.precision = profile["precision"]
+    model.input_resolution = profile["input_shape"]
+
+    analysis = Analysis(
+        model_id=model.id,
+        model_family=profile["model_family"],
+        parameters_count=profile["parameters_count"],
+        flops=profile["flops"],
+        macs=profile.get("macs"),
+        activation_memory_mb=profile.get("activation_memory_mb"),
+        weight_memory_mb=profile.get("weight_memory_mb"),
+        total_memory_mb=profile["total_memory_mb"],
+        input_shape=profile["input_shape"],
+        precision=profile["precision"],
+        op_histogram=profile.get("op_histogram"),
+        analysis_summary=profile.get("analysis_summary"),
+    )
+    db.add(analysis)
+    db.commit()
+    db.refresh(analysis)
+
+    generate_recommendations(analysis, db)
+    return analysis
 
 
 @router.get("/models/{model_id}", response_model=ModelOut)
@@ -222,6 +297,70 @@ def get_model(model_id: int, user: User = Depends(get_current_user), db: Session
 def list_models(project_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Model]:
     project = get_project(project_id, user, db)
     return list(db.scalars(select(Model).where(Model.project_id == project.id).order_by(Model.created_at.desc())))
+
+
+@router.post("/projects/{project_id}/load-sample", response_model=ModelOut, status_code=status.HTTP_201_CREATED)
+def load_sample_model(
+    project_id: int,
+    sample_name: str = Query(..., description="Sample model filename in samples/"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Model:
+    import shutil
+    project = get_project(project_id, user, db)
+    samples_dir = Path("samples")
+    sample_file = samples_dir / sample_name
+    if not sample_file.exists():
+        raise HTTPException(status_code=404, detail=f"Sample model '{sample_name}' not found")
+
+    dest_dir = UPLOADS_DIR / f"project-{project.id}"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / f"{uuid4().hex}_{sample_name}"
+    shutil.copyfile(sample_file, dest_path)
+
+    model = Model(
+        project_id=project.id,
+        filename=sample_name,
+        framework="ONNX",
+        precision="FP32",
+        storage_path=str(dest_path),
+    )
+    db.add(model)
+    db.commit()
+    db.refresh(model)
+
+    try:
+        profile = analyze_model_file(str(dest_path), sample_name)
+        model.parameters = profile["parameters_count"]
+        model.flops = profile["flops"]
+        model.memory = profile["total_memory_mb"]
+        model.precision = profile["precision"]
+        model.input_resolution = profile["input_shape"]
+
+        analysis = Analysis(
+            model_id=model.id,
+            model_family=profile["model_family"],
+            parameters_count=profile["parameters_count"],
+            flops=profile["flops"],
+            macs=profile.get("macs"),
+            activation_memory_mb=profile.get("activation_memory_mb"),
+            weight_memory_mb=profile.get("weight_memory_mb"),
+            total_memory_mb=profile["total_memory_mb"],
+            input_shape=profile["input_shape"],
+            precision=profile["precision"],
+            op_histogram=profile.get("op_histogram"),
+            analysis_summary=profile.get("analysis_summary"),
+        )
+        db.add(analysis)
+        db.commit()
+        db.refresh(analysis)
+
+        generate_recommendations(analysis, db)
+        db.refresh(model)
+    except Exception as e:
+        logger.warning(f"Error profiling sample model: {e}")
+
+    return model
 
 
 # ---------------- Hardware Devices Endpoints ----------------
