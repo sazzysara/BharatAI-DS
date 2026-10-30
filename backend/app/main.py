@@ -33,6 +33,7 @@ from .schemas import (
     ModelOut,
     ProjectCreate,
     ProjectOut,
+    ProjectSpecificationRequest,
     ProjectUpdate,
     RecommendationOut,
     ReportOut,
@@ -44,7 +45,8 @@ from .schemas import (
 )
 from .security import create_access_token, get_current_user, password_hash
 from .services.analyzer import analyze_model_file
-from .services.recommender import generate_recommendations
+from .services.recommender import evaluate_project_specification, generate_recommendations
+from .services.document_parser import parse_project_specification_document
 from .services.pdf_generator import generate_project_pdf
 
 def get_uploads_dir() -> Path:
@@ -402,6 +404,60 @@ def load_sample_model(
     except Exception as e:
         logger.warning(f"Error profiling sample model: {e}")
 
+    return model
+
+
+@router.post("/projects/{project_id}/specify-and-recommend", response_model=ModelOut, status_code=status.HTTP_201_CREATED)
+def specify_and_recommend(
+    project_id: int,
+    payload: ProjectSpecificationRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Model:
+    ensure_tables()
+    project = db.get(Project, project_id)
+    if not project or project.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    model, analysis, recs = evaluate_project_specification(payload.model_dump(), project, db)
+    return model
+
+
+@router.post("/projects/{project_id}/upload-specification-document", response_model=ModelOut, status_code=status.HTTP_201_CREATED)
+async def upload_specification_document(
+    project_id: int,
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Model:
+    ensure_tables()
+    project = db.get(Project, project_id)
+    if not project or project.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    filename = Path(file.filename or "specification.pdf").name
+    ext = Path(filename).suffix.lower()
+    allowed_exts = {".pdf", ".docx", ".doc", ".txt", ".md", ".json"}
+    if ext not in allowed_exts:
+        raise HTTPException(
+            status_code=422,
+            detail="Supported specification documents: PDF (.pdf), Word (.docx, .doc), Text (.txt, .md), or JSON (.json)",
+        )
+
+    file_bytes = await file.read()
+    if len(file_bytes) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Document file must be 50 MB or smaller")
+
+    # Save to uploads dir
+    dest_dir = get_uploads_dir() / f"project-{project.id}"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / f"{uuid4().hex}_{filename}"
+    with open(dest_path, "wb") as f:
+        f.write(file_bytes)
+
+    # Parse specification from document text
+    spec = parse_project_specification_document(file_bytes, filename)
+    model, analysis, recs = evaluate_project_specification(spec, project, db)
     return model
 
 

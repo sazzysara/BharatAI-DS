@@ -30,6 +30,24 @@ class AuthResponse(BaseModel):
 
 
 # ---------------- Project Schemas ----------------
+class ProjectSpecificationRequest(BaseModel):
+    model_name: str = Field(min_length=2, max_length=150, default="Llama-3-8B-Instruct")
+    model_type: str = Field(default="LLM", description="LLM, Vision / CNN, Audio / Speech, Transformer / NLP")
+    parameter_count_b: float = Field(default=8.0, ge=0.001, description="Parameters in Billions (e.g. 8.0 for 8B, 0.025 for 25M)")
+    precision: str = Field(default="INT4", description="FP32, FP16, BF16, INT8, INT4")
+    workload: str = Field(default="Inference", description="Inference, LoRA Fine-Tuning, Full Training")
+    target_environment: str = Field(default="Workstation", description="Drone / Battery, Edge Appliance, Workstation, Datacenter")
+    target_latency_ms: float | None = Field(default=None, description="Max acceptable latency per token/frame in ms")
+    target_throughput: float | None = Field(default=None, description="Target Tokens/sec or FPS")
+    max_budget_inr: float | None = Field(default=None, description="Maximum capital budget in INR")
+    max_power_w: float | None = Field(default=None, description="Maximum power consumption in Watts")
+    context_length: int = Field(default=4096, ge=128, le=131072)
+    batch_size: int = Field(default=1, ge=1, le=256)
+    concurrent_users: int = Field(default=1, ge=1, le=1000)
+    priority: str = Field(default="Balanced", description="Cost-Efficient, Maximum Performance, Low Power, Balanced, Sovereign Indian")
+    prefer_indian: bool = Field(default=False)
+
+
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     description: str | None = Field(default=None, max_length=1000)

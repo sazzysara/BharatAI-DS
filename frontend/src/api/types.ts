@@ -19,6 +19,24 @@ export interface Project {
   updated_at: string;
 }
 
+export interface ProjectSpecification {
+  model_name: string;
+  model_type: string;
+  parameter_count_b: number;
+  precision: string;
+  workload: string;
+  target_environment: string;
+  target_latency_ms?: number | null;
+  target_throughput?: number | null;
+  max_budget_inr?: number | null;
+  max_power_w?: number | null;
+  context_length: number;
+  batch_size: number;
+  concurrent_users: number;
+  priority: string;
+  prefer_indian: boolean;
+}
+
 export interface Model {
   id: number;
   project_id: number;

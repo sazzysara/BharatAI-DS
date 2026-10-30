@@ -1,6 +1,7 @@
 import {
   AuthResponse,
   Project,
+  ProjectSpecification,
   Model,
   HardwareDevice,
   Benchmark,
@@ -176,6 +177,22 @@ class ApiClient {
   async loadSampleModel(projectId: number, sampleName: string): Promise<Model> {
     return this.request<Model>(`/projects/${projectId}/load-sample?sample_name=${encodeURIComponent(sampleName)}`, {
       method: 'POST',
+    });
+  }
+
+  async specifyAndRecommend(projectId: number, spec: ProjectSpecification): Promise<Model> {
+    return this.request<Model>(`/projects/${projectId}/specify-and-recommend`, {
+      method: 'POST',
+      body: JSON.stringify(spec),
+    });
+  }
+
+  async uploadSpecificationDocument(projectId: number, file: File): Promise<Model> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.request<Model>(`/projects/${projectId}/upload-specification-document`, {
+      method: 'POST',
+      body: formData,
     });
   }
 
